@@ -1,11 +1,18 @@
 import React, {Component} from 'react';
 import PropTypes from 'prop-types';
-import {getSingleMedia} from '../util/MediaAPI';
+import {getSingleMedia, getFilters, getDescription} from '../util/MediaAPI';
+import {Button} from '@material-ui/core';
 
 class Single extends Component {
   mediaUrl = 'http://media.mw.metropolia.fi/wbma/uploads/';
   state = {
-    file: 'http://placekitten.com/200/200',
+    file: {
+      filename: '',
+      title: '',
+      description: '[d][/d][f][/f]',
+      media_type: 'image/jpg',
+      user_id: 1,
+    },
     filters: {
       brightness: 100,
       contrast: 100,
@@ -17,46 +24,41 @@ class Single extends Component {
   componentDidMount() {
     const {id} = this.props.match.params;
     getSingleMedia(id).then(pic => {
-      console.log(pic);
+      console.log('pic', pic);
+      console.log('filters', getFilters(pic.description, this.state.filters));
       this.setState({
         file: pic,
-        filters: this.getFilters(pic.description),
+        filters: getFilters(pic.description, this.state.filters),
+      }, () => {
+        console.log('state', this.state);
       });
     });
   }
 
-  getFilters = (text) => {
-    const pattern = '\\[f\\](.*?)\\[\\/f\\]';
-    const re = new RegExp(pattern);
-    // console.log(re.exec(value));
-    try {
-      return JSON.parse(re.exec(text)[1]);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  getDescription = (text) => {
-    const pattern = '\\[d\\]((.|[\\r\\n])*?)\\[\\/d\\]';
-    const re = new RegExp(pattern);
-    console.log(re.exec(text));
-    try {
-      return re.exec(text)[1];
-    } catch (e) {
-      return text;
-    }
-  };
-
   render() {
+    const {title, description, filename, media_type} = this.state.file;
+    const {brightness, contrast, saturation, warmth} = this.state.filters;
     return (
         <React.Fragment>
-          <h1>{this.state.file.title}</h1>
-          <img src={this.mediaUrl + this.state.file.filename}
-               alt={this.state.file.title}
-               style={{filter: `brightness(${this.state.filters.brightness}%) contrast(${this.state.filters.contrast}%) sepia(${this.state.filters.warmth}%) saturate(${this.state.filters.saturation}%)`}}
+          <Button onClick={this.props.history.goBack}>Back</Button>
+          {console.log(media_type)}
+          <h1>{title}</h1>
+          {media_type.includes('image') &&
+          <img src={this.mediaUrl + filename}
+               alt={title}
+               style={{filter: `brightness(${brightness}%) contrast(${contrast}%) sepia(${warmth}%) saturate(${saturation}%)`}}
           />
+          }
+          {media_type.includes('video') &&
+          <video src={this.mediaUrl + filename}
+                 controls
+          />}
+          {media_type.includes('audio') &&
+          <audio src={this.mediaUrl + filename}
+                 controls
+          />}
           <p>
-            {this.getDescription(this.state.file.description)}
+            {getDescription(description)}
           </p>
         </React.Fragment>
     );
@@ -66,6 +68,8 @@ class Single extends Component {
 
 Single.propTypes = {
   match: PropTypes.object,
+  user: PropTypes.object,
+  history: PropTypes.object,
 };
 
 export default Single;
